@@ -89,11 +89,11 @@ class SiteGeoDaoRedis(SiteGeoDaoBase, RedisDaoBase):
     def find_all(self, **kwargs) -> Set[Site]:
         """Find all Sites."""
         site_ids = self.redis.zrange(self.key_schema.site_geo_key(), 0, -1)
-        sites = set()
+        p = self.redis.pipeline(transaction=False)
 
         for site_id in site_ids:
             key = self.key_schema.site_hash_key(site_id)
-            site_hash = self.redis.hgetall(key)
-            sites.add(FlatSiteSchema().load(site_hash))
+            p.hgetall(key)
 
-        return sites
+        site_hashes = p.execute()
+        return {FlatSiteSchema().load(site) for site in site_hashes}
